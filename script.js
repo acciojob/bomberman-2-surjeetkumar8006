@@ -25,31 +25,36 @@
       board.appendChild(square);
       squares.push(square);
 
-      square.addEventListener('click', function () {
-        click(square);
-      });
-
-      square.addEventListener('contextmenu', function (e) {
+      square.addEventListener('click', () => click(square));
+      square.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         addFlag(square);
       });
     }
 
-    // add numbers
+    // assign numbers
     for (let i = 0; i < squares.length; i++) {
-      let total = 0;
-      const isLeftEdge = i % width === 0;
-      const isRightEdge = i % width === width - 1;
-
       if (squares[i].classList.contains('valid')) {
-        if (i > 0 && !isLeftEdge && squares[i - 1].classList.contains('bomb')) total++;
-        if (i > 9 && !isRightEdge && squares[i + 1 - width].classList.contains('bomb')) total++;
-        if (i >= 10 && squares[i - width].classList.contains('bomb')) total++;
-        if (i >= 11 && !isLeftEdge && squares[i - 1 - width].classList.contains('bomb')) total++;
-        if (i < 99 && !isRightEdge && squares[i + 1].classList.contains('bomb')) total++;
-        if (i < 90 && !isLeftEdge && squares[i - 1 + width].classList.contains('bomb')) total++;
-        if (i <= 89 && !isRightEdge && squares[i + 1 + width].classList.contains('bomb')) total++;
-        if (i <= 89 && squares[i + width].classList.contains('bomb')) total++;
+        let total = 0;
+        const isLeftEdge = i % width === 0;
+        const isRightEdge = i % width === width - 1;
+
+        // top
+        if (i >= width && squares[i - width].classList.contains('bomb')) total++;
+        // top-right
+        if (i >= width && !isRightEdge && squares[i + 1 - width].classList.contains('bomb')) total++;
+        // right
+        if (!isRightEdge && squares[i + 1].classList.contains('bomb')) total++;
+        // bottom-right
+        if (i < width * (width - 1) && !isRightEdge && squares[i + 1 + width].classList.contains('bomb')) total++;
+        // bottom
+        if (i < width * (width - 1) && squares[i + width].classList.contains('bomb')) total++;
+        // bottom-left
+        if (i < width * (width - 1) && !isLeftEdge && squares[i - 1 + width].classList.contains('bomb')) total++;
+        // left
+        if (!isLeftEdge && squares[i - 1].classList.contains('bomb')) total++;
+        // top-left
+        if (i >= width && !isLeftEdge && squares[i - 1 - width].classList.contains('bomb')) total++;
 
         squares[i].setAttribute('data', total);
       }
@@ -71,6 +76,7 @@
         flags++;
       }
       flagsLeft.textContent = flags;
+      checkForWin();
     }
   }
 
@@ -80,13 +86,20 @@
 
     if (square.classList.contains('bomb')) {
       gameOver();
-    } else {
-      let total = square.getAttribute('data');
-      square.classList.add('checked');
+      return;
+    }
+
+    let total = square.getAttribute('data');
+    square.classList.add('checked');
+    if (total && total !== '0') {
       square.textContent = total;
       score++;
-      if (score === 90) winGame();
+      checkForWin();
+      return;
     }
+
+    score++;
+    checkForWin();
   }
 
   function gameOver() {
@@ -95,8 +108,24 @@
     squares.forEach((sq) => {
       if (sq.classList.contains('bomb')) {
         sq.textContent = '💣';
+        sq.classList.add('checked'); // ✅ required for .checked length = 10
       }
     });
+  }
+
+  function checkForWin() {
+    const checkedCount = document.querySelectorAll('.checked').length;
+    if (checkedCount === width * width - bombAmount) {
+      winGame();
+    }
+
+    const flaggedBombs = squares.filter(
+      (sq) => sq.classList.contains('flag') && sq.classList.contains('bomb')
+    ).length;
+
+    if (flaggedBombs === bombAmount && flags === 0) {
+      winGame();
+    }
   }
 
   function winGame() {
